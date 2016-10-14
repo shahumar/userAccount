@@ -6,6 +6,7 @@ from accounts.forms import SignupForm
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from accounts.utils import default_redirect
+from accounts.models import EmailAddress, Account
 
 class PasswordMixin(object):
     redirect_field_name = 'next'
@@ -76,6 +77,17 @@ class SignupView(PasswordMixin, FormView):
     def get_code(self):
         return self.request.POST.get('code', self.request.GET.get('code'))
 
+    def get_initial(self):
+        initial = super(SignupView, self).get_initial()
+        if self.signup_code:
+            initial['code'] = self.signup_code.code
+            if self.signup_code.email:
+                initial['email'] = self.signup_code.email
+        return initial
+
+    def form_invalid(self, form):
+        raise Exception(form)
+
     def form_valid(self, form):
         self.created_user = self.create_user(form, commit=False)
         self.created_user._disable_account_creation = True
@@ -85,8 +97,12 @@ class SignupView(PasswordMixin, FormView):
         if settings.ACCOUNT_EMAIL_CONFIRMATION_REQUIRED and not email_address.verified:
             self.created_user.is_active = False
             self.created_user.save()
-
+        self.create_account(form)
+        
         raise Exception(form)
+
+    def create_account(self, form):
+        return Account.create(request=self.request,user=self.created_user, create_email=False)
 
     def create_user(self, form, commit=True, model=None, **kwargs):
         User = model
@@ -110,3 +126,11 @@ class SignupView(PasswordMixin, FormView):
     def use_signup_code(self, user):
         if self.signup_code:
             self.signup_code.use(user)
+
+    def create_email_address(self, form, **kwargs):
+        kwargs.setdefault("primary", True)
+        kwargs.setdefault("verified", False)
+        if self.signup_code:
+            kwargs['verified'] = self.created_user.email == self.signup_code.email if self.signup_code.email else False
+        return EmailAddress.objects.add_email(self.created_user, self.created_user.email, **kwargs)
+

@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/1.10/ref/settings/
 """
 
 import os
+import pytz
+from accounts.languages import LANGUAGES
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -122,3 +124,6 @@ STATIC_URL = '/static/'
 ACCOUNT_SIGNUP_REDIRECT_URL = '/accounts/signup'
 ACCOUNT_EMAIL_CONFIRMATION_REQUIRED = True
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+ACCOUNT_EMAIL_UNIQUE = True
+ACCOUNT_TIMEZONES = list(zip(pytz.all_timezones, pytz.all_timezones))
+ACCOUNT_LANGUAGES = LANGUAGES
