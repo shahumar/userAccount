@@ -12,7 +12,31 @@ from accounts.utils import default_redirect
 from accounts.models import EmailAddress, Account, PasswordHistory, EmailConfirmation
 from accounts import signals
 from accounts.hooks import hookset
-from accounts.forms import SignupForm
+from accounts.forms import SignupForm, LoginUsernameForm
+
+
+
+class LoginView(FormView):
+    template_name = 'accounts/login.html'
+    template_name_ajax = 'accounts/ajax/login.html'
+    form_class = LoginUsernameForm
+    form_kwargs = {}
+    redirect_field_name = 'next'
+
+    def get(self, *args, **kwargs):
+        if self.request.user.is_authenticated():
+            return redirect(self.get_success_url())
+        return super(LoginView, self).get(*args, **kwargs)
+        
+    def get_context_data(self, **kwargs):
+        ctx = kwargs
+        redirect_field_name = self.get_redirect_field_name()
+        ctx.update({'redirect_field_name': redirect_field_name, 'redirect_field_value': self.request.POST.get(redirect_field_name, self.request.GET.get(redirect_field_name, ''))})
+        return ctx
+
+    def get_redirect_field_name(self):
+        return self.redirect_field_name
+
 
 
 class PasswordMixin(object):

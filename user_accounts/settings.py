@@ -40,6 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'accounts',
+
+    'pinax_theme_bootstrap',
+    'bootstrapform'
 ]
 
 MIDDLEWARE_CLASSES = [

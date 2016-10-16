@@ -1,4 +1,8 @@
 import re
+try:
+    from collections import OrderedDict
+except ImportError:
+    OrderedDict = None
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth import get_user_model
@@ -27,4 +31,26 @@ class SignupForm(forms.Form):
         if not qs.exists():
             return self.cleaned_data['username']
         raise forms.ValidationError(_("Username already exists"))
+
+
+class LoginForm(forms.Form):
+    password = forms.CharField(label=_("password"), widget=forms.PasswordInput(render_value=False))
+    remember = forms.BooleanField(label=_("Remember me"), required=False)
+    user = None
+
+    def clean(self):
+        pass
+
+class LoginUsernameForm(LoginForm):
+    username = forms.CharField(label=_('username'), max_length=30)
+    authentication_fail_message = _("The username or password you specify are not correct")
+    identifier_field = 'username'
+
+    def __init__(self, *args, **kwargs):
+        super(LoginUsernameForm, self).__init(*args, **kwargs)
+        field_order = ['username', 'password', 'remember']
+        if not OrderedDict or hasattr(self.fields,'keyOrder'):
+            self.fields.keyOrder = field_order
+        else:
+            self.fields = OrderedDict((k,self.fields[k]) for k in field_order)
 
