@@ -29,13 +29,19 @@ class LoginView(FormView):
         return super(LoginView, self).get(*args, **kwargs)
         
     def get_context_data(self, **kwargs):
-        ctx = kwargs
+        ctx = super(LoginView, self).get_context_data(**kwargs)
         redirect_field_name = self.get_redirect_field_name()
-        ctx.update({'redirect_field_name': redirect_field_name, 'redirect_field_value': self.request.POST.get(redirect_field_name, self.request.GET.get(redirect_field_name, ''))})
+        ctx.update({
+            'redirect_field_name': redirect_field_name, 
+            'redirect_field_value': self.request.POST.get(redirect_field_name, self.request.GET.get(redirect_field_name, '')),
+        })
         return ctx
 
     def get_redirect_field_name(self):
         return self.redirect_field_name
+
+    def form_valid(self, form):
+        return super(LoginView, self).form_valid(form)
 
 
 

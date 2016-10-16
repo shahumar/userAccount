@@ -38,8 +38,6 @@ class LoginForm(forms.Form):
     remember = forms.BooleanField(label=_("Remember me"), required=False)
     user = None
 
-    def clean(self):
-        pass
 
 class LoginUsernameForm(LoginForm):
     username = forms.CharField(label=_('username'), max_length=30)
@@ -47,7 +45,7 @@ class LoginUsernameForm(LoginForm):
     identifier_field = 'username'
 
     def __init__(self, *args, **kwargs):
-        super(LoginUsernameForm, self).__init(*args, **kwargs)
+        super(LoginUsernameForm, self).__init__(*args, **kwargs)
         field_order = ['username', 'password', 'remember']
         if not OrderedDict or hasattr(self.fields,'keyOrder'):
             self.fields.keyOrder = field_order
