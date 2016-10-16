@@ -10,6 +10,8 @@
 		<script type="text/javascript" src="/static/jquery.js"></script>
 	</head>
 	<body>
+    {% block body %}
+    {% endblock %}
 		<div class="container">
             <div class="navbar">
                 {% if user.email %}

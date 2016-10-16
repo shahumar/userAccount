@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'accounts',
 ]
 
-MIDDLEWARE = [
+MIDDLEWARE_CLASSES = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -103,6 +103,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Internationalization
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
 
@@ -123,7 +124,6 @@ USE_TZ = True
 STATIC_URL = '/static/'
 ACCOUNT_SIGNUP_REDIRECT_URL = '/accounts/signup'
 ACCOUNT_EMAIL_CONFIRMATION_REQUIRED = True
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 ACCOUNT_EMAIL_UNIQUE = True
 ACCOUNT_TIMEZONES = list(zip(pytz.all_timezones, pytz.all_timezones))
 ACCOUNT_LANGUAGES = LANGUAGES
