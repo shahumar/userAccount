@@ -136,3 +136,6 @@ class PasswordHistory(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='password_history')
     password = models.CharField(max_length=255)
     timestamp = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return self.user.email

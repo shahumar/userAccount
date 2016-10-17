@@ -56,4 +56,9 @@ def ensure_safe_url(url, allowed_protocols=None, allowed_host=None, raise_on_fai
     return safe
 
 
-
+def get_form_data(form, field_name, default=None):
+    if form.prefix:
+        key = '-'.join([form.prefix,field_name])
+    else:
+        key = field_name
+    return form.data.get(key, default)

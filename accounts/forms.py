@@ -8,6 +8,8 @@ from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth import get_user_model
 
 from accounts.utils import get_user_lookup_kwargs
+from accounts.models import EmailAddress
+from accounts.conf import settings
 
 alnum_re = re.compile('^\w+$')
 
@@ -31,6 +33,19 @@ class SignupForm(forms.Form):
         if not qs.exists():
             return self.cleaned_data['username']
         raise forms.ValidationError(_("Username already exists"))
+
+    def clean_email(self):
+        value = self.cleaned_data['email']
+        qs = EmailAddress.objects.filter(email__iexact=value)
+        if not qs.exists() and not settings.ACCOUNT_EMAIL_UNIQUE:
+            return value
+        raise forms.ValidationError(_("User registered with this email address"))
+
+    def clean(self):
+        if "password" in self.cleaned_data and 'password_confirm' in self.cleaned_data:
+            if self.cleaned_data['password'] != self.cleaned_data['password_confirm']:
+                raise forms.ValidationError(_("Confirm Password did not match with Passord"))
+        return self.cleaned_data
 
 
 class LoginForm(forms.Form):

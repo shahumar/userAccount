@@ -92,7 +92,6 @@ class SignupView(PasswordMixin, FormView):
     form_class = SignupForm
     fallback_url_setting = 'ACCOUNT_SIGNUP_REDIRECT_URL'
     form_password_field = 'password'
-    identifier_field = 'username'
 
     def __init__(self, *args, **kwargs):
         self.created_user = None
