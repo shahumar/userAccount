@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.views.generic.edit import FormView
-from django.contrib import messages
+from django.contrib import messages, auth
 from django.contrib.sites.shortcuts import get_current_site
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth.hashers import make_password
@@ -41,7 +41,14 @@ class LoginView(FormView):
         return self.redirect_field_name
 
     def form_valid(self, form):
-        return super(LoginView, self).form_valid(form)
+        self.login_user(form)
+        self.after_login(form)
+        return redirect(self.get_success_url())
+    
+    def login_user(self, form):
+        auth.login(self.request, form.user)
+        expiry = settings.ACCOUNT_REMEMBER_ME_EXPIRY if form.cleaned_data.get('remember') else 0
+        self.request.session.set_expiry(expiry)
 
 
 
@@ -93,6 +100,8 @@ class SignupView(PasswordMixin, FormView):
     fallback_url_setting = 'ACCOUNT_SIGNUP_REDIRECT_URL'
     form_password_field = 'password'
     identifier_field = 'username'
+    template_name_email_confirmation_sent = 'accounts/email_confirmation_sent.html'
+    template_name_email_confirmation_sent_ajax = 'accounts/ajax/ email_confirmation_sent.html'
 
     def __init__(self, *args, **kwargs):
         self.created_user = None
@@ -152,11 +161,43 @@ class SignupView(PasswordMixin, FormView):
         self.after_signup(form)
         if settings.ACCOUNT_EMAIL_CONFIRMATION_EMAIL and not email_address.verified:
             self.send_email_confirmation(email_address)
+        if settings.ACCOUNT_EMAIL_CONFIRMATION_REQUIRED and not email_address.verified:
+            return self.email_confirmation_required_response()
+        else:
+            show_message = [
+                settings.ACCOUNT_EMAIL_CONFIRMATION_EMAIL,
+                self.messages.get('email_confirmation_sent'),
+                not email_address.verified
+            ]
+            if all(show_message):
+                messages.add_message(
+                    self.request, 
+                    self.messages['email_confirmation_sent']['level'],
+                    self.messages['email_confirmation_sent']['text'].format(**{'email': form.cleaned_data['email']}))
+            self.form = form
+            self.login_user()
+        return redirect(self.get_success_url())
 
-        raise Exception(form)
+    def email_confirmation_required_response(self):
+        if self.request.is_ajax():
+            template_name = self.template_name_email_confirmation_sent_ajax
+        else:
+            template_name = self.template_name_email_confirmation_sent
+        response_kwargs = {
+            'request': self.request,
+            'template': template_name,
+            'context': { 'email': self.created_user.email, 'success_url': self.get_success_url()}
+        }
+        return self.response_class(**response_kwargs)
 
     def send_email_confirmation(self, email_address):
         email_address.send_confirmation(site=get_current_site(self.request))
+
+    def login_user(self):
+        user = auth.authenticate(**self.user_credentials())
+        auth.login(self.request, user)
+        self.request.session.set_expiry(0)
+
 
     def after_signup(self, form):
         signals.user_signed_up.send(sender=SignupForm, user=self.created_user, form=form)
@@ -251,6 +292,9 @@ class ConfirmEmailView(TemplateResponseMixin, View):
         qs = EmailConfirmation.objects.all()
         qs = qs.select_related('email_address__user')
         return qs
+
+    def after_login(self, form):
+        signals.user_logged_in.send(sender=LoginView, user=form.user, form=form)
 
     def get_context_data(self, **kwargs):
         ctx = kwargs
