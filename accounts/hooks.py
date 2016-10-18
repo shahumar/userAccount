@@ -19,6 +19,13 @@ class AccountDefaultHookSet(object):
     def generate_email_confirmation_token(self, email):
         return self.generate_random_token([email])
 
+    def get_user_credentials(self, form, identifier_field):
+        return { 
+            'username': form.cleaned_data[identifier_field],
+            'password': form.cleaned_data['password'],
+        }
+
+
     def generate_random_token(self, extra=None, hash_func=hashlib.sha256):
         if extra is None:
             extra = []

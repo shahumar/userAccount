@@ -6,10 +6,12 @@ except ImportError:
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 from django.contrib.auth import get_user_model
+from django.contrib import auth
 
 from accounts.utils import get_user_lookup_kwargs
 from accounts.models import EmailAddress
 from accounts.conf import settings
+from accounts.hooks import hookset
 
 alnum_re = re.compile('^\w+$')
 
@@ -52,6 +54,22 @@ class LoginForm(forms.Form):
     password = forms.CharField(label=_("password"), widget=forms.PasswordInput(render_value=False))
     remember = forms.BooleanField(label=_("Remember me"), required=False)
     user = None
+
+    def clean(self):
+        if self._errors:
+            return
+        user =  auth.authenticate(**self.user_credentials())
+        if user:
+            if user.is_active:
+                self.user = user
+            else:
+                raise forms.ValidationError(_('This account is inactive'))
+        else:
+            raise forms.ValidationError(_(self.authentication_fail_message))
+        return self.cleaned_data
+
+    def user_credentials(self):
+        return hookset.get_user_credentials(self, self.identifier_field)
 
 
 class LoginUsernameForm(LoginForm):
