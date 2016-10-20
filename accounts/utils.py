@@ -8,6 +8,7 @@ except ImportError:
 from django.core.exceptions import SuspiciousOperation
 from django.core import urlresolvers
 from django.contrib.auth import get_user_model
+from django.http import QueryDict, HttpResponseRedirect
 
 
 def get_user_lookup_kwargs(kwargs):
@@ -62,3 +63,28 @@ def get_form_data(form, field_name, default=None):
     else:
         key = field_name
     return form.data.get(key, default)
+
+def handle_redirect_to_login(request, **kwargs):
+    login_url = kwargs.get('login_url')
+    redirect_field_name = kwargs.get('redirect_field_name')
+    next_url = kwargs.get('next_url')
+    if login_url is None:
+        login_url = settings.ACCOUNT_LOGIN_URL
+    if next_url is None:
+        next_url = request.get_full_path()
+    try:
+        login_url = urlresolvers.reverse(login_url)
+    except urlresolvers.NoReverseMatch:
+        if callable(login_url):
+            raise
+        if '/' not in login_url and '.' not in login_url:
+            raise
+
+    url_bits = list(urlparse(login_url))
+    if redirect_field_name:
+        querystring = QueryDict(url_bits[4], mutable=True)
+        querystring[redirect_field_name] = next_url
+        url_bits[4] = querystring.urlencode(safe='/')
+
+    return HttpResponseRedirect(urlunparse(url_bits))
+

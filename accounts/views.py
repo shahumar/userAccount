@@ -12,7 +12,8 @@ from accounts.utils import default_redirect, get_form_data
 from accounts.models import EmailAddress, Account, PasswordHistory, EmailConfirmation
 from accounts import signals
 from accounts.hooks import hookset
-from accounts.forms import SignupForm, LoginUsernameForm
+from accounts.forms import SignupForm, LoginUsernameForm, SettingsForm
+from accounts.mixins import LoginRequiredMixin
 
 
 
@@ -50,6 +51,14 @@ class LoginView(FormView):
         expiry = settings.ACCOUNT_REMEMBER_ME_EXPIRY if form.cleaned_data.get('remember') else 0
         self.request.session.set_expiry(expiry)
 
+    def after_login(self, form):
+        signals.user_logged_in.send(sender=LoginView, user=form.user, form=form)
+        
+    def get_success_url(self, fallback_url=None, **kwargs):
+        if fallback_url is None:
+            fallback_url = settings.ACCOUNT_LOGIN_REDIRECT_URL
+        kwargs.setdefault('redirect_field_name', self.get_redirect_field_name())
+        return default_redirect(self.request, fallback_url, **kwargs)
 
 
 class PasswordMixin(object):
@@ -300,3 +309,108 @@ class ConfirmEmailView(TemplateResponseMixin, View):
         ctx = kwargs
         ctx['confirmation'] = self.object
         return ctx
+
+
+class LogoutView(TemplateResponseMixin, View):
+    
+    template_name = 'accounts/logout.html'
+    redirect_field_name = 'next'
+
+    def get(self, *args, **kwargs):
+        if not self.request.user.is_authenticated():
+            return redirect(self.get_redirect_url())
+        ctx = self.get_context_data()
+        return self.render_to_response(ctx)
+
+    def get_context_data(self, **kwargs):
+        ctx = kwargs
+        redirect_field_name = self.get_redirect_field_name()
+        ctx.update({
+            'redirect_field_name': redirect_field_name,
+            'redirect_field_value': self.request.POST.get(redirect_field_name, self.request.GET.get(redirect_field_name, ''))
+        })
+        return ctx
+
+    def get_redirect_url(self, fallback_url=None, **kwargs):
+        if fallback_url is None:
+            fallback_url = settings.ACCOUNT_LOGOUT_REDIRECT_URL
+        kwargs.setdefault('redirect_field_name', self.get_redirect_field_name())
+        return default_redirect(self.request, fallback_url, **kwargs)
+
+    def get_redirect_field_name(self):
+        return self.redirect_field_name
+
+
+class SettingsView(LoginRequiredMixin, FormView):
+    
+    template_name = 'accounts/settings.html'
+    form_class = SettingsForm
+    redirect_field_name = 'next'
+    messages = {
+        'settings_updated': {
+            'level': messages.SUCCESS,
+            'text': _('Account settings updated')
+        }
+    }
+
+    def get_form_class(self):
+        self.primary_email_address = EmailAddress.objects.get_primary(self.request.user)
+        return super(SettingsView, self).get_form_class()
+
+    def get_initial(self):
+        initial = super(SettingsView, self).get_initial()
+        if self.primary_email_address:
+            initial['email'] = self.primary_email_address.email
+        #initial['timezone'] = self.request.user.account.timezone
+        initial['language'] = self.request.user.account.language
+        return initial
+
+    def form_valid(self, form):
+        self.update_settings(form)
+        if self.messages.get('settings_updated'):
+            messages.add_message(
+                self.request, 
+                self.messages['settings_updated']['level'],
+                self.messages['settings_updated']['text']
+            )
+        return redirect(self.get_success_url())
+    def update_settings(self, form):
+        self.update_email(form)
+        self.update_account(form)
+
+    def update_email(self, form, confirm=None):
+        user = self.request.user
+        if confirm is None:
+            confirm = settings.ACCOUNT_EMAIL_CONFIRMATION_EMAIL
+        email = form.cleaned_data['email'].strip()
+        if not self.primary_email_address:
+            user.email = email
+            EmailAddress.objects.add_email(self.request.user, email, primary=True, confirm = confirm)
+            user.save()
+        else:
+            if email != self.primary_email_address.email:
+                self.primary_email_address.change(email, confirm=confirm)
+
+    def update_account(self, form):
+        fields = {}
+        if 'timezone' in form.cleaned_data:
+            fields['timezone']=form.cleaned_data['timezone']
+        if 'language' in form.cleaned_data:
+            fields['language'] = form.cleaned_data['language']
+        if fields:
+            account = self.request.user.account
+            for k, v in fields.items():
+                setattr(account, k, v)
+            account.save()
+
+    def get_success_url(self, fallback_url=None, **kwargs):
+        if fallback_url is None:
+            fallback_url = settings.ACCOUNT_SETTINGS_REDIRECT_URL
+        kwargs.setdefault('redirect_field_name', self.get_redirect_field_name())
+        return default_redirect(self.request, fallback_url, **kwargs)
+
+    def get_redirect_field_name(self):
+        return self.redirect_field_name
+
+
+

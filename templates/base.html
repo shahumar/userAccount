@@ -16,7 +16,7 @@
             <div class="navbar">
                 {% if user.email %}
                 <p>logged in as {{user.email}}</p>
-                <p><a id="logout" href="{% url 'logout' %}">Sign out</a></p>
+                <p><a id="logout" href="{% url 'account_logout' %}">Sign out</a></p>
                 {% else %}
                 <a href="#" id="login">Sign In</a>
                 {%endif%}

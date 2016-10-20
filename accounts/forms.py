@@ -85,3 +85,17 @@ class LoginUsernameForm(LoginForm):
         else:
             self.fields = OrderedDict((k,self.fields[k]) for k in field_order)
 
+class SettingsForm(forms.Form):
+    email = forms.EmailField(label=_('email'), required=True)
+    timezone = forms.ChoiceField(label = _('Timezone'), choices=[("", "-----")]+settings.ACCOUNT_TIMEZONES, required=False)
+    if settings.USE_I18N:
+        language = forms.ChoiceField(label = _('language'), choices=settings.ACCOUNT_LANGUAGES, required=False)
+    
+    def clean_email(self):
+        value = self.cleaned_data['email']
+        if self.initial.get('email') == value:
+            return value
+        qs = EmailAddress.objects.filter(email__iexact=value)
+        if not qs.exists() or not settings.ACCOUNT_EMAIL_UNIQUE:
+            return value
+        raise forms.ValidationError(_('A user is registered with this email address'))

@@ -24,7 +24,7 @@ def load_path_attr(path):
 
 
 class AccountsAppconf(AppConf):
-    LOGIN_URL = 'login'
+    LOGIN_URL = 'account_login'
     LOGOUT_URL = "logout"
     SIGNUP_REDIRECT_URL = "/"
     LOGIN_REDIRECT_URL = "/"
@@ -35,6 +35,7 @@ class AccountsAppconf(AppConf):
     EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
     EMAIL_CONFIRMATION_AUTHENTICATED_REDIRECT_URL = None
     EMAIL_CONFIRMATION_ANONYMOUS_REDIRECT_URL = 'account_login'
+    SETTINGS_REDIRECT_URL = 'account_settings'
     TIMEZONES = TIMEZONES
     PASSWORD_USE_HISTORY = True
     HOOKSET = "accounts.hooks.AccountDefaultHookSet"
